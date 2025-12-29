@@ -1,0 +1,93 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: app
+      RABBITMQ_DEFAULT_PASS: app
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  auth_service:
+    build: ./auth_service
+    environment:
+      SERVICE_NAME: auth_service
+      DATABASE_URL: postgresql+psycopg2://app:app@postgres:5432/appdb
+      JWT_SECRET: DUhBi61fh85J8fA47npzwo1PYXjXlsfjVXcoFRgKWcy
+      JWT_ALG: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      LOG_DIR: /logs
+      LOG_LEVEL: INFO
+
+    ports:
+      - "8001:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - ./logs:/logs
+
+
+  collection_service:
+    build: ./collection_service
+    environment:
+      SERVICE_NAME: collection_service
+      DATABASE_URL: postgresql+psycopg2://app:app@postgres:5432/appdb
+      JWT_SECRET: DUhBi61fh85J8fA47npzwo1PYXjXlsfjVXcoFRgKWcy
+      JWT_ALG: HS256
+      RABBITMQ_URL: amqp://app:app@rabbitmq:5672/%2F
+      LOG_DIR: /logs
+      LOG_LEVEL: INFO
+    ports:
+      - "8002:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - ./logs:/logs
+
+  stats_service:
+    build: ./stats_service
+    environment:
+      SERVICE_NAME: stats_service
+      DATABASE_URL: postgresql+psycopg2://app:app@postgres:5432/appdb
+      JWT_SECRET: DUhBi61fh85J8fA47npzwo1PYXjXlsfjVXcoFRgKWcy
+      JWT_ALG: HS256
+      RABBITMQ_URL: amqp://app:app@rabbitmq:5672/%2F
+      LOG_DIR: /logs
+      LOG_LEVEL: INFO
+    ports:
+      - "8003:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - ./logs:/logs
