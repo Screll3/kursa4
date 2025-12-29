@@ -13,5 +13,9 @@ docker-compose up --build
 - collection_service
 - stats_service
 
+## Отчёт
+- [Открыть PDF](КУРСОВАЯ Иргит Я. В. 231-339 BackEnd.pdf)
+
 ## Видеоотчет
 - Пока нет
+
